@@ -36,17 +36,28 @@ void setup()
 
 void loop()
 {
-  uint16_t channel1 = crsf.getChannel(1);
-  uint16_t channel2 = crsf.getChannel(2);
-
-  Wire.beginTransmission(I2C_SLAVE_ADDR);
-  Wire.write((uint8_t)(channel1 >> 8));   // High byte Ch1
-  Wire.write((uint8_t)(channel1 & 0xFF)); // Low byte Ch1
-  Wire.write((uint8_t)(channel2 >> 8));   // High byte Ch2
-  Wire.write((uint8_t)(channel2 & 0xFF)); // Low byte Ch2
-  Wire.endTransmission();
+  bool status = crsf.isLinkUp();
+  uint16_t chData[16];
   
-    // Must call crsf.update() in loop() to process data
+
+for (int ChannelNum = 0; ChannelNum < 16; ChannelNum++)
+  {
+    chData[ChannelNum] = crsf.getChannel(ChannelNum + 1); // load data
+
+  }
+
+
+  Wire.beginTransmission(I2C_SLAVE_ADDR); // begin transmission
+  Wire.write((uint8_t) status); // send out the status of connection
+  // Data channel send loop
+  for (int ChannelNum = 0; ChannelNum < 16; ChannelNum++)
+  {
+    Wire.write((uint8_t)(chData[ChannelNum] >> 8));   // High byte Ch
+    Wire.write((uint8_t)(chData[ChannelNum] & 0xFF)); // Low byte Ch
+  }
+  
+  Wire.endTransmission(); // end I2C transmission
+  
+  // Must call crsf.update() in loop() to process data
   crsf.update();
-    // printChannels();
 }
