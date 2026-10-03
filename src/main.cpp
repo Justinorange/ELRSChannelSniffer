@@ -4,13 +4,13 @@
 #include <Wire.h>
 
 
-// CRSF UART Pins
-#define CRSF_RX_PIN 20
-#define CRSF_TX_PIN 21
+// CRSF UART Pins: valid for Pico UART1 (GPIO 20 TX, 21 RX)
+#define CRSF_RX_PIN 21
+#define CRSF_TX_PIN 20
 
-// Output UART Pins (Adjust these GPIOs as needed)
-#define OUT_TX_PIN  6
-#define OUT_RX_PIN  7
+// Output UART Pins: valid for Pico UART0 (GPIO 0 TX, 1 RX)
+#define OUT_TX_PIN  0
+#define OUT_RX_PIN  1
 #define OUT_BAUDRATE 115200
 
 // Packet Constants
@@ -21,9 +21,10 @@
 #define SUBCLASS_ID   0x01 // Custom Subclass ID
 #define PAYLOAD_LEN   1 + 2*TOTAL_CHANNELS   // 1 byte (status) + (TOTAL_CHANNELS * 2 bytes)
 
-// Set up a new Serial object
-HardwareSerial crsfSerial(1);
-HardwareSerial outSerial(0);
+// Set up Pico UART objects. On the RP2040, Serial1/Serial2 are the UART instances
+// and need their TX/RX pins assigned before begin().
+SerialUART crsfSerial = Serial2;
+SerialUART outSerial = Serial1;
 AlfredoCRSF crsf;
 
 //Use crsf.getChannel(x) to get us channel values (1-16).
@@ -49,11 +50,16 @@ void calculateFletcher16(const uint8_t *data, size_t length, uint8_t &checkA, ui
 
 void setup()
 {
-  // setup serial output to purple board
-  outSerial.begin(OUT_BAUDRATE, SERIAL_8N1, OUT_RX_PIN, OUT_TX_PIN);
+  // setup serial output to the downstream board
+  outSerial.setRX(OUT_RX_PIN);
+  outSerial.setTX(OUT_TX_PIN);
+  outSerial.begin(OUT_BAUDRATE, SERIAL_8N1);
 
   // setup serial input from CRSF device
-  crsfSerial.begin(CRSF_BAUDRATE, SERIAL_8N1, CRSF_RX_PIN, CRSF_TX_PIN);
+  crsfSerial.setRX(CRSF_RX_PIN);
+  crsfSerial.setTX(CRSF_TX_PIN);
+  crsfSerial.begin(CRSF_BAUDRATE, SERIAL_8N1);
+
   // loop forever until CRSF is connected
   if (!crsfSerial) while (1) Serial.println("Invalid crsfSerial configuration");
 
