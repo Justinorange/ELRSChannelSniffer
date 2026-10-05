@@ -21,10 +21,10 @@
 #define SUBCLASS_ID   0x01 // Custom Subclass ID
 #define PAYLOAD_LEN   1 + 2*TOTAL_CHANNELS   // 1 byte (status) + (TOTAL_CHANNELS * 2 bytes)
 
-// Set up Pico UART objects. On the RP2040, Serial1/Serial2 are the UART instances
-// and need their TX/RX pins assigned before begin().
-SerialUART crsfSerial = Serial2;
-SerialUART outSerial = Serial1;
+// Use the Pico core's UART instances directly; copying SerialUART would copy
+// its internal peripheral and synchronization state.
+SerialUART& crsfSerial = Serial2;
+SerialUART& outSerial = Serial1;
 AlfredoCRSF crsf;
 
 //Use crsf.getChannel(x) to get us channel values (1-16).
@@ -50,6 +50,8 @@ void calculateFletcher16(const uint8_t *data, size_t length, uint8_t &checkA, ui
 
 void setup()
 {
+  pinMode(LED_BUILTIN, OUTPUT);
+
   // setup serial output to the downstream board
   outSerial.setRX(OUT_RX_PIN);
   outSerial.setTX(OUT_TX_PIN);
@@ -57,6 +59,8 @@ void setup()
 
   // setup serial input from CRSF device
   crsfSerial.setRX(CRSF_RX_PIN);
+  digitalWrite(LED_BUILTIN, HIGH);
+
   crsfSerial.setTX(CRSF_TX_PIN);
   crsfSerial.begin(CRSF_BAUDRATE, SERIAL_8N1);
 
@@ -68,6 +72,7 @@ void setup()
 
 void loop()
 {
+  digitalWrite(LED_BUILTIN, LOW);
   crsf.update();
 
   bool status = crsf.isLinkUp();
@@ -101,11 +106,14 @@ void loop()
   uint8_t chkA = 0, chkB = 0;
   calculateFletcher16(&packet[2], 2 + PAYLOAD_LEN, chkA, chkB);
 
+
+
   packet[idx++] = chkA;
   packet[idx++] = chkB;
 
   // Send exact number of written bytes
   outSerial.write(packet, idx);
+  digitalWrite(LED_BUILTIN, HIGH);
 
   delay(10);
 }
